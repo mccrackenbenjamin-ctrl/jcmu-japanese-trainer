@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JCMU Japanese Trainer</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f5f5f5;
+}
+header {
+  background: #003366;
+  color: white;
+  padding: 16px;
+  text-align: center;
+  font-size: 20px;
+}
+.container {
+  padding: 16px;
+}
+button {
+  width: 100%;
+  padding: 14px;
+  margin: 8px 0;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+  background: #0066cc;
+  color: white;
+}
+button.secondary {
+  background: #888;
+}
+#conversation {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  min-height: 200px;
+  margin-bottom: 12px;
+}
+.feedback {
+  background: #fff;
+  padding: 12px;
+  border-radius: 12px;
+}
+</style>
+</head>
+<body>
+<header>JCMU Japanese Trainer</header>
+<div class="container" id="app">
+
+<div id="home">
+<h3>Genki I - Lesson 1</h3>
+<button onclick="startScenario('host')">🎤 Meet Host Family</button>
+<button onclick="startScenario('classmates')">🎤 Meet Classmates</button>
+<button onclick="startScenario('professor')">🎤 Meet Professor</button>
+</div>
+
+<div id="scenario" style="display:none;">
+<div id="conversation"></div>
+<button onclick="startListening()">🎤 Tap to Speak</button>
+<button class="secondary" onclick="goHome()">Back</button>
+<div class="feedback" id="feedback"></div>
+</div>
+
+</div>
+
+<script>
+let scenario = null;
+let recognition;
+
+const scenarios = {
+  host: [
+    "はじめまして。お名前は？",
+    "どこから来ましたか？",
+    "よろしくお願いします。"
+  ],
+  classmates: [
+    "はじめまして。専攻は何ですか？",
+    "日本語をどのくらい勉強しましたか？",
+    "一緒に頑張りましょう。"
+  ],
+  professor: [
+    "はじめまして。名前を教えてください。",
+    "なぜ日本に来ましたか？",
+    "授業で会いましょう。"
+  ]
+};
+
+let step = 0;
+
+function startScenario(type) {
+  scenario = scenarios[type];
+  step = 0;
+  document.getElementById('home').style.display = 'none';
+  document.getElementById('scenario').style.display = 'block';
+  speak(scenario[step]);
+}
+
+function goHome() {
+  document.getElementById('scenario').style.display = 'none';
+  document.getElementById('home').style.display = 'block';
+  document.getElementById('conversation').innerHTML = '';
+}
+
+function speak(text) {
+  const convo = document.getElementById('conversation');
+  convo.innerHTML += `<p><strong>AI:</strong> ${text}</p>`;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'ja-JP';
+  speechSynthesis.speak(utterance);
+}
+
+function startListening() {
+  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'ja-JP';
+
+  recognition.onresult = function(event) {
+    const transcript = event.results[0][0].transcript;
+    document.getElementById('conversation').innerHTML += `<p><strong>You:</strong> ${transcript}</p>`;
+
+    provideFeedback(transcript);
+
+    step++;
+    if (step < scenario.length) {
+      setTimeout(() => speak(scenario[step]), 500);
+    }
+  };
+
+  recognition.start();
+}
+
+function provideFeedback(text) {
+  let feedback = "✔ Good attempt!";
+
+  if (!text.includes("はじめまして")) {
+    feedback += "<br>💡 Try adding: はじめまして";
+  }
+
+  document.getElementById('feedback').innerHTML = feedback;
+}
+</script>
+
+</body>
+</html>
