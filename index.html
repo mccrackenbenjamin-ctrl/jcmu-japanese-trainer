@@ -73,6 +73,8 @@ let step=0;
 let role='student';
 let mistakes={price:0,particles:0};
 let progress=JSON.parse(localStorage.getItem("jcmuProgress")||"{}");
+let mastery={score:0,total:0};
+let destination="";
 
 const scenarios={
  host:[
@@ -85,8 +87,7 @@ const scenarios={
   {jp:"これをください。",en:"I'll take this."}
  ],
  train:[
-  {jp:"どちらまで行きますか？",en:"Where are you going?"},
-  {jp:"片道ですか？往復ですか？",en:"One way or round trip?",branch:"train_type"}
+  {jp:"どちらまで行きますか？",en:"Where are you going?",branch:"destination"}
  ],
  conbini:[
   {jp:"袋はいりますか？",en:"Do you need a bag?",branch:"bag"}
@@ -175,49 +176,57 @@ function startListening(){
  recognition.onresult=function(e){
   const text=e.results[0][0].transcript;
   document.getElementById('conversation').innerHTML+=`<p><b>You:</b> ${text}</p>`;
+  mastery.total++;
+  if(text.length>2) mastery.score++;
 
-  // Adaptive difficulty tracking
   if(!text.includes("いくら")) mistakes.price++;
   if(!text.match(/[はをがにで]/)) mistakes.particles++;
 
-    // Branching logic
   if(scenario[step].branch){
     const type=scenario[step].branch;
 
+    if(type==='destination'){
+      if(text.includes("京都")) destination="京都";
+      else if(text.includes("大阪")) destination="大阪";
+      else destination="彦根";
+      scenario=[
+        {jp: destination+"までですね。",en:"To "+destination+"."},
+        {jp:"片道ですか？往復ですか？",en:"One way or round trip?",branch:"train_type"}
+      ];
+      step=0;
+      setTimeout(()=>speakLine(),500);
+      return;
+    }
+
     if(type==='bag'){
-      if(text.includes("はい")) scenario=branches.bag_yes;
-      else scenario=branches.bag_no;
+      scenario = text.includes("はい") ? branches.bag_yes : branches.bag_no;
+      step=0; setTimeout(()=>speakLine(),500); return;
     }
 
     if(type==='train_type'){
-      if(text.includes("往復")) scenario=branches.train_round;
-      else scenario=branches.train_oneway;
+      scenario = text.includes("往復") ? branches.train_round : branches.train_oneway;
+      step=0; setTimeout(()=>speakLine(),500); return;
     }
 
     if(type==='ticket_type'){
-      if(text.includes("IC")) scenario=branches.ticket_ic;
-      else scenario=branches.ticket_paper;
+      scenario = text.includes("IC") ? branches.ticket_ic : branches.ticket_paper;
+      step=0; setTimeout(()=>speakLine(),500); return;
     }
 
     if(type==='train_speed'){
-      if(text.includes("新幹線")) scenario=branches.train_shinkansen;
-      else scenario=branches.train_local;
+      scenario = text.includes("新幹線") ? branches.train_shinkansen : branches.train_local;
+      step=0; setTimeout(()=>speakLine(),500); return;
     }
 
     if(type==='seat_type'){
-      if(text.includes("指定")) scenario=branches.seat_reserved;
-      else scenario=branches.seat_nonreserved;
+      scenario = text.includes("指定") ? branches.seat_reserved : branches.seat_nonreserved;
+      step=0; setTimeout(()=>speakLine(),500); return;
     }
 
     if(type==='student_discount'){
-      if(text.includes("はい")) scenario=branches.student_yes;
-      else scenario=branches.student_no;
+      scenario = text.includes("はい") ? branches.student_yes : branches.student_no;
+      step=0; setTimeout(()=>speakLine(),500); return;
     }
-
-    step=0;
-    setTimeout(()=>speakLine(),500);
-    return;
-  }
   }
 
   step++;
@@ -228,7 +237,8 @@ function startListening(){
 }
 
 function endScenario(){
- let feedback="Conversation Complete<br>";
+ const percent = mastery.total ? Math.round((mastery.score/mastery.total)*100) : 0;
+ let feedback=`Conversation Complete<br>⭐ Mastery Score: ${percent}%<br>`;
  let drillButtons="";
 
  if(mistakes.price>1){
