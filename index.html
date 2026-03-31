@@ -63,6 +63,163 @@ button.secondary {background:#888;}
 
 <div id="scenario" style="display:none;">
 <div id="conversation"></div>
+<button onclick="toggleRole()">🔄 Switch Role</button>
+<button onclick="repeatPrompt()">🔁 Repeat</button>
+<button onclick="startListening()">🎤 Tap to Speak</button>
+<button onclick="showExample()">💡 Example</button>
+<button class="secondary" onclick="goHome()">Back</button>
+<div class="feedback" id="feedback"></div>
+</div>
+
+<div id="hiragana" style="display:none;">
+<h3>Hiragana Practice</h3>
+<div class="grid" id="hiraganaGrid"></div>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+<div id="katakana" style="display:none;">
+<h3>Katakana Practice</h3>
+<div class="grid" id="katakanaGrid"></div>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+<div id="kanaQuiz" style="display:none;">
+<h3>Kana Quiz</h3>
+<div id="quizQuestion"></div>
+<button onclick="nextQuiz()">Next</button>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+<div id="progress" style="display:none;">
+<h3>Student Progress</h3>
+<div class="progress" id="progressData"></div>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+</div>
+
+<script>
+let scenario=null;
+let step=0;
+let score=0;
+let progress=JSON.parse(localStorage.getItem("jcmuProgress")||"{}");
+
+const scenarios={
+ host:[
+  {jp:"はじめまして。",en:"Nice to meet you.",hint:"Introduce yourself",example:"はじめまして。ベンです。"},
+  {jp:"お名前は？",en:"What is your name?",hint:"Say your name",example:"ベンです。"},
+  {jp:"どこから来ましたか？",en:"Where are you from?",hint:"Use ～から来ました",example:"アメリカから来ました。"}
+ ],
+ classmates:[
+  {jp:"専攻は何ですか？",en:"What is your major?",hint:"State major",example:"政治学です。"},
+  {jp:"何年生ですか？",en:"What year are you?",hint:"Say year",example:"二年生です。"},
+  {jp:"よろしく！",en:"Nice to meet you (casual)",hint:"Casual close",example:"よろしく！"}
+ ],
+ professor:[
+  {jp:"おはようございます。",en:"Good morning.",hint:"Greet politely",example:"おはようございます。"},
+  {jp:"アメリカから来ました。",en:"I came from America.",hint:"Say origin",example:"アメリカから来ました。"},
+  {jp:"よろしくお願いします。",en:"Nice to meet you.",hint:"Polite close",example:"よろしくお願いします。"}
+ ],
+ shopping:[
+  {jp:"これはいくらですか？",en:"How much is this?",hint:"Ask price",example:"これはいくらですか？"},
+  {jp:"ちょっと高いですね。",en:"That’s a bit expensive.",hint:"Comment politely",example:"ちょっと高いですね。"},
+  {jp:"これをください。",en:"I'll take this.",hint:"Buy item",example:"これをください。"}
+ ]
+};
+
+const hiragana=["あ","い","う","え","お","か","き","く","け","こ","さ","し","す","せ","そ","た","ち","つ","て","と","な","に","ぬ","ね","の"];
+const katakana=["ア","イ","ウ","エ","オ","カ","キ","ク","ケ","コ","サ","シ","ス","セ","ソ","タ","チ","ツ","テ","ト","ナ","ニ","ヌ","ネ","ノ"];
+
+function showMenu(menu){ hideAll(); document.getElementById(menu).style.display='block'; if(menu==='progress') updateProgress(); }
+function hideAll(){ ['home','survival','genki','genki2','scenario','hiragana','katakana','kanaQuiz','progress'].forEach(id=>{document.getElementById(id).style.display='none';}); }
+function goHome(){ hideAll(); document.getElementById('home').style.display='block'; }
+
+let role='student';
+
+function startScenario(type){
+ scenario=scenarios[type];
+ step=0;
+ score=0;
+ role='student';
+ hideAll();
+ document.getElementById('scenario').style.display='block';
+ document.getElementById('conversation').innerHTML='';
+ speakLine();
+}
+
+function toggleRole(){
+ role = role==='student' ? 'ai' : 'student';
+ document.getElementById('conversation').innerHTML='';
+ step=0;
+ speakLine();
+}
+
+function speakLine(){
+ const line=scenario[step];
+ if(role==='student'){
+  speak(line.jp, line.en);
+ }else{
+  document.getElementById('conversation').innerHTML+=`<p><b>You:</b> ${line.jp}<br><i>${line.en}</i></p>`;
+  setTimeout(()=>{ step++; if(step<scenario.length) speakLine(); else endScenario();},800);
+ }
+}
+
+function speak(text,en){
+ document.getElementById('conversation').innerHTML+=`<p><b>AI:</b> ${text}<br><i>${en||''}</i></p>`;
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang='ja-JP';
+ speechSynthesis.speak(u);
+}</p>`; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; speechSynthesis.speak(u); }
+function repeatPrompt(){ speak(scenario[step].jp); }
+function showExample(){ document.getElementById('feedback').innerHTML=`💡 Example: ${scenario[step].example}`; }
+
+function startListening(){ const recognition=new (window.SpeechRecognition||window.webkitSpeechRecognition)(); recognition.lang='ja-JP'; recognition.onresult=function(e){ const text=e.results[0][0].transcript; document.getElementById('conversation').innerHTML+=`<p><b>You:</b> ${text}</p>`; provideFeedback(text); step++; if(step<scenario.length){setTimeout(()=>speak(scenario[step].jp),600);}else{endScenario();} }; recognition.start(); }
+
+function provideFeedback(text){ let fb="✔ Good attempt"; if(text.length>3) score++; if(!text.includes("です")) fb+="<br>💡 Try ending with です"; fb+=`<br><span class='badge'>Hint: ${scenario[step].hint}</span>`; document.getElementById('feedback').innerHTML=fb; }
+
+function endScenario(){ document.getElementById('feedback').innerHTML=`Conversation Complete<br>Score ${score}/${scenario.length}`; progress.completed=(progress.completed||0)+1; localStorage.setItem("jcmuProgress",JSON.stringify(progress)); }
+
+function buildKana(grid,data){ const g=document.getElementById(grid); g.innerHTML=""; data.forEach(k=>{ const div=document.createElement('div'); div.className='card'; div.innerText=k; div.onclick=()=>speak(k); g.appendChild(div); }); }
+
+buildKana('hiraganaGrid',hiragana);
+buildKana('katakanaGrid',katakana);
+
+function nextQuiz(){ const all=[...hiragana,...katakana]; const k=all[Math.floor(Math.random()*all.length)]; document.getElementById('quizQuestion').innerHTML=`<div class='card'>${k}</div><p>Say this aloud</p>`; speak(k); }
+
+function updateProgress(){ document.getElementById('progressData').innerHTML=`Conversations completed: ${progress.completed||0}`; }
+</script>
+
+</body>
+</html>
+<h3>JCMU Survival Mode</h3>
+<button onclick="startScenario('train')">🚉 Train Station</button>
+<button onclick="startScenario('conbini')">🏪 Convenience Store</button>
+<button onclick="startScenario('bus')">🧭 Bus</button>
+<button onclick="startScenario('cafeteria')">🍱 Cafeteria</button>
+<button onclick="startScenario('cityhall')">🏫 City Hall</button>
+<button onclick="startScenario('bike')">🚲 Bike Rental</button>
+<button onclick="startScenario('pharmacy')">💊 Pharmacy</button>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+<div id="genki" style="display:none;">
+<h3>Genki I - Lesson 1</h3>
+<button onclick="startScenario('host')">🎤 Meet Host Family</button>
+<button onclick="startScenario('classmates')">🎤 Meet Classmates</button>
+<button onclick="startScenario('professor')">🎤 Meet Professor</button>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+<div id="genki2" style="display:none;">
+<h3>Genki I - Lesson 2</h3>
+<button onclick="startScenario('shopping')">🛒 Shopping</button>
+<button onclick="startScenario('restaurant')">🍜 Restaurant</button>
+<button onclick="startScenario('time')">⏰ Asking Time</button>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+<div id="scenario" style="display:none;">
+<div id="conversation"></div>
 <button onclick="repeatPrompt()">🔁 Repeat</button>
 <button onclick="startListening()">🎤 Tap to Speak</button>
 <button onclick="showExample()">💡 Example</button>
