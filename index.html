@@ -29,7 +29,15 @@ button.secondary {background:#888;}
 <button onclick="showMenu('hiragana')">🔤 Hiragana Unit</button>
 <button onclick="showMenu('katakana')">🔡 Katakana Unit</button>
 <button onclick="showMenu('kanaQuiz')">🧠 Kana Quiz</button>
+<button onclick="showMenu('survival')">🗺 JCMU Survival Mode</button>
 <button onclick="showMenu('progress')">📊 Progress</button>
+</div>
+
+<div id="survival" style="display:none;">
+<h3>JCMU Survival Mode</h3>
+<button onclick="startScenario('train')">🚉 Train Station</button>
+<button onclick="startScenario('conbini')">🏪 Convenience Store</button>
+<button class="secondary" onclick="goHome()">Back</button>
 </div>
 
 <div id="genki" style="display:none;">
@@ -91,6 +99,16 @@ let score=0;
 let progress=JSON.parse(localStorage.getItem("jcmuProgress")||"{}");
 
 const scenarios={
+ train:[
+  {jp:"すみません、彦根までいくらですか？",hint:"Ask fare",example:"彦根までいくらですか？"},
+  {jp:"どのホームですか？",hint:"Ask platform",example:"三番ホームですか？"},
+  {jp:"ありがとうございます。",hint:"Be polite",example:"ありがとうございます。"}
+ ],
+ conbini:[
+  {jp:"袋はいりますか？",hint:"Respond yes/no",example:"はい、お願いします。"},
+  {jp:"温めますか？",hint:"Microwave question",example:"はい、温めてください。"},
+  {jp:"ポイントカードはありますか？",hint:"Decline politely",example:"いいえ、ありません。"}
+ ],
  host:[
   {jp:"はじめまして。お名前は？",hint:"Say your name",example:"はじめまして。ベンです。"},
   {jp:"どこから来ましたか？",hint:"Use ～から来ました",example:"アメリカから来ました。"},
@@ -117,7 +135,7 @@ const hiragana=["あ","い","う","え","お","か","き","く","け","こ","さ
 const katakana=["ア","イ","ウ","エ","オ","カ","キ","ク","ケ","コ","サ","シ","ス","セ","ソ","タ","チ","ツ","テ","ト","ナ","ニ","ヌ","ネ","ノ"];
 
 function showMenu(menu){ hideAll(); document.getElementById(menu).style.display='block'; if(menu==='progress') updateProgress(); }
-function hideAll(){ ['home','genki','genki2','scenario','hiragana','katakana','kanaQuiz','progress'].forEach(id=>{document.getElementById(id).style.display='none';}); }
+function hideAll(){ ['home','survival','genki','genki2','scenario','hiragana','katakana','kanaQuiz','progress'].forEach(id=>{document.getElementById(id).style.display='none';}); }
 function goHome(){ hideAll(); document.getElementById('home').style.display='block'; }
 
 function startScenario(type){ scenario=scenarios[type]; step=0; score=0; hideAll(); document.getElementById('scenario').style.display='block'; document.getElementById('conversation').innerHTML=''; speak(scenario[step].jp); }
