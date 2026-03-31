@@ -37,6 +37,11 @@ button.secondary {background:#888;}
 <h3>JCMU Survival Mode</h3>
 <button onclick="startScenario('train')">🚉 Train Station</button>
 <button onclick="startScenario('conbini')">🏪 Convenience Store</button>
+<button onclick="startScenario('bus')">🧭 Bus</button>
+<button onclick="startScenario('cafeteria')">🍱 Cafeteria</button>
+<button onclick="startScenario('cityhall')">🏫 City Hall</button>
+<button onclick="startScenario('bike')">🚲 Bike Rental</button>
+<button onclick="startScenario('pharmacy')">💊 Pharmacy</button>
 <button class="secondary" onclick="goHome()">Back</button>
 </div>
 
@@ -99,6 +104,31 @@ let score=0;
 let progress=JSON.parse(localStorage.getItem("jcmuProgress")||"{}");
 
 const scenarios={
+ bus:[
+  {jp:"このバスは彦根駅に行きますか？",hint:"Ask destination",example:"彦根駅に行きますか？"},
+  {jp:"いくらですか？",hint:"Ask fare",example:"いくらですか？"},
+  {jp:"ありがとうございます。",hint:"Be polite",example:"ありがとうございます。"}
+ ],
+ cafeteria:[
+  {jp:"おすすめは何ですか？",hint:"Ask recommendation",example:"おすすめは何ですか？"},
+  {jp:"カレーをください。",hint:"Order food",example:"カレーをください。"},
+  {jp:"水もください。",hint:"Add item",example:"水もください。"}
+ ],
+ cityhall:[
+  {jp:"住民登録をしたいです。",hint:"State purpose",example:"住民登録をしたいです。"},
+  {jp:"必要なものは何ですか？",hint:"Ask requirements",example:"必要なものは何ですか？"},
+  {jp:"ありがとうございます。",hint:"Be polite",example:"ありがとうございます。"}
+ ],
+ bike:[
+  {jp:"自転車を借りたいです。",hint:"Request rental",example:"自転車を借りたいです。"},
+  {jp:"一日いくらですか？",hint:"Ask price",example:"一日いくらですか？"},
+  {jp:"はい、お願いします。",hint:"Confirm",example:"はい、お願いします。"}
+ ],
+ pharmacy:[
+  {jp:"風邪薬はありますか？",hint:"Ask medicine",example:"風邪薬はありますか？"},
+  {jp:"おすすめはどれですか？",hint:"Ask recommendation",example:"おすすめはどれですか？"},
+  {jp:"これをください。",hint:"Choose item",example:"これをください。"}
+ ],
  train:[
   {jp:"すみません、彦根までいくらですか？",hint:"Ask fare",example:"彦根までいくらですか？"},
   {jp:"どのホームですか？",hint:"Ask platform",example:"三番ホームですか？"},
