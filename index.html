@@ -5,144 +5,165 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>JCMU Japanese Trainer</title>
 <style>
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 0;
-  background: #f5f5f5;
-}
-header {
-  background: #003366;
-  color: white;
-  padding: 16px;
-  text-align: center;
-  font-size: 20px;
-}
-.container {
-  padding: 16px;
-}
-button {
-  width: 100%;
-  padding: 14px;
-  margin: 8px 0;
-  font-size: 16px;
-  border-radius: 10px;
-  border: none;
-  background: #0066cc;
-  color: white;
-}
-button.secondary {
-  background: #888;
-}
-#conversation {
-  background: white;
-  padding: 16px;
-  border-radius: 12px;
-  min-height: 200px;
-  margin-bottom: 12px;
-}
-.feedback {
-  background: #fff;
-  padding: 12px;
-  border-radius: 12px;
-}
+body {font-family: Arial, sans-serif;margin:0;padding:0;background:#f5f5f5;}
+header {background:#003366;color:white;padding:16px;text-align:center;font-size:20px;}
+.container {padding:16px;}
+button {width:100%;padding:14px;margin:8px 0;font-size:16px;border-radius:10px;border:none;background:#0066cc;color:white;}
+button.secondary {background:#888;}
+#conversation {background:white;padding:16px;border-radius:12px;min-height:200px;margin-bottom:12px;}
+.feedback {background:#fff;padding:12px;border-radius:12px;}
+.badge {display:inline-block;padding:4px 8px;margin:2px;border-radius:8px;background:#e0f0ff;font-size:12px;}
+.grid {display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.card {background:white;padding:12px;border-radius:10px;text-align:center;font-size:20px;}
 </style>
 </head>
 <body>
 <header>JCMU Japanese Trainer</header>
-<div class="container" id="app">
+<div class="container">
 
 <div id="home">
+<h3>Core Training</h3>
+<button onclick="showMenu('genki')">📘 Genki Lesson 1</button>
+<button onclick="showMenu('hiragana')">🔤 Hiragana Unit</button>
+<button onclick="showMenu('katakana')">🔡 Katakana Unit</button>
+</div>
+
+<div id="genki" style="display:none;">
 <h3>Genki I - Lesson 1</h3>
 <button onclick="startScenario('host')">🎤 Meet Host Family</button>
 <button onclick="startScenario('classmates')">🎤 Meet Classmates</button>
 <button onclick="startScenario('professor')">🎤 Meet Professor</button>
+<button class="secondary" onclick="goHome()">Back</button>
 </div>
 
 <div id="scenario" style="display:none;">
 <div id="conversation"></div>
+<button onclick="repeatPrompt()">🔁 Repeat</button>
 <button onclick="startListening()">🎤 Tap to Speak</button>
+<button onclick="showExample()">💡 Example</button>
 <button class="secondary" onclick="goHome()">Back</button>
 <div class="feedback" id="feedback"></div>
+</div>
+
+<div id="hiragana" style="display:none;">
+<h3>Hiragana Practice</h3>
+<div class="grid" id="hiraganaGrid"></div>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+<div id="katakana" style="display:none;">
+<h3>Katakana Practice</h3>
+<div class="grid" id="katakanaGrid"></div>
+<button class="secondary" onclick="goHome()">Back</button>
 </div>
 
 </div>
 
 <script>
-let scenario = null;
-let recognition;
+let scenario=null;
+let step=0;
+let score=0;
 
-const scenarios = {
-  host: [
-    "はじめまして。お名前は？",
-    "どこから来ましたか？",
-    "よろしくお願いします。"
-  ],
-  classmates: [
-    "はじめまして。専攻は何ですか？",
-    "日本語をどのくらい勉強しましたか？",
-    "一緒に頑張りましょう。"
-  ],
-  professor: [
-    "はじめまして。名前を教えてください。",
-    "なぜ日本に来ましたか？",
-    "授業で会いましょう。"
-  ]
+const scenarios={
+ host:[
+  {jp:"はじめまして。お名前は？",hint:"Say your name",example:"はじめまして。ベンです。"},
+  {jp:"どこから来ましたか？",hint:"Use ～から来ました",example:"アメリカから来ました。"},
+  {jp:"よろしくお願いします。",hint:"Repeat politely",example:"よろしくお願いします。"}
+ ],
+ classmates:[
+  {jp:"はじめまして。専攻は何ですか？",hint:"Mention major",example:"政治学です。"},
+  {jp:"日本語をどのくらい勉強しましたか？",hint:"Use ～年",example:"二年勉強しました。"},
+  {jp:"一緒に頑張りましょう。",hint:"Agree politely",example:"はい、頑張りましょう。"}
+ ],
+ professor:[
+  {jp:"はじめまして。名前を教えてください。",hint:"Full intro",example:"ベンです。"},
+  {jp:"なぜ日本に来ましたか？",hint:"Use ～ために",example:"勉強するために来ました。"},
+  {jp:"授業で会いましょう。",hint:"Closing",example:"はい、よろしくお願いします。"}
+ ]
 };
 
-let step = 0;
+const hiragana=["あ","い","う","え","お","か","き","く","け","こ","さ","し","す","せ","そ","た","ち","つ","て","と","な","に","ぬ","ね","の"];
+const katakana=["ア","イ","ウ","エ","オ","カ","キ","ク","ケ","コ","サ","シ","ス","セ","ソ","タ","チ","ツ","テ","ト","ナ","ニ","ヌ","ネ","ノ"];
 
-function startScenario(type) {
-  scenario = scenarios[type];
-  step = 0;
-  document.getElementById('home').style.display = 'none';
-  document.getElementById('scenario').style.display = 'block';
-  speak(scenario[step]);
+function showMenu(menu){
+ hideAll();
+ document.getElementById(menu).style.display='block';
 }
 
-function goHome() {
-  document.getElementById('scenario').style.display = 'none';
-  document.getElementById('home').style.display = 'block';
-  document.getElementById('conversation').innerHTML = '';
+function hideAll(){
+ ['home','genki','scenario','hiragana','katakana'].forEach(id=>{
+  document.getElementById(id).style.display='none';
+ });
 }
 
-function speak(text) {
-  const convo = document.getElementById('conversation');
-  convo.innerHTML += `<p><strong>AI:</strong> ${text}</p>`;
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'ja-JP';
-  speechSynthesis.speak(utterance);
+function goHome(){
+ hideAll();
+ document.getElementById('home').style.display='block';
 }
 
-function startListening() {
-  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = 'ja-JP';
-
-  recognition.onresult = function(event) {
-    const transcript = event.results[0][0].transcript;
-    document.getElementById('conversation').innerHTML += `<p><strong>You:</strong> ${transcript}</p>`;
-
-    provideFeedback(transcript);
-
-    step++;
-    if (step < scenario.length) {
-      setTimeout(() => speak(scenario[step]), 500);
-    }
-  };
-
-  recognition.start();
+function startScenario(type){
+ scenario=scenarios[type];
+ step=0;
+ score=0;
+ hideAll();
+ document.getElementById('scenario').style.display='block';
+ document.getElementById('conversation').innerHTML='';
+ speak(scenario[step].jp);
 }
 
-function provideFeedback(text) {
-  let feedback = "✔ Good attempt!";
-
-  if (!text.includes("はじめまして")) {
-    feedback += "<br>💡 Try adding: はじめまして";
-  }
-
-  document.getElementById('feedback').innerHTML = feedback;
+function speak(text){
+ document.getElementById('conversation').innerHTML+=`<p><b>AI:</b> ${text}</p>`;
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang='ja-JP';
+ speechSynthesis.speak(u);
 }
+
+function repeatPrompt(){
+ speak(scenario[step].jp);
+}
+
+function showExample(){
+ document.getElementById('feedback').innerHTML=`💡 Example: ${scenario[step].example}`;
+}
+
+function startListening(){
+ const recognition=new (window.SpeechRecognition||window.webkitSpeechRecognition)();
+ recognition.lang='ja-JP';
+ recognition.onresult=function(e){
+  const text=e.results[0][0].transcript;
+  document.getElementById('conversation').innerHTML+=`<p><b>You:</b> ${text}</p>`;
+  provideFeedback(text);
+  step++;
+  if(step<scenario.length){setTimeout(()=>speak(scenario[step].jp),600);}else{endScenario();}
+ };
+ recognition.start();
+}
+
+function provideFeedback(text){
+ let fb="✔ Good attempt";
+ if(text.length>3) score++;
+ if(!text.includes("です")) fb+="<br>💡 Try ending with です";
+ fb+=`<br><span class='badge'>Hint: ${scenario[step].hint}</span>`;
+ document.getElementById('feedback').innerHTML=fb;
+}
+
+function endScenario(){
+ document.getElementById('feedback').innerHTML=`Conversation Complete<br>Score ${score}/${scenario.length}`;
+}
+
+function buildKana(grid,data){
+ const g=document.getElementById(grid);
+ data.forEach(k=>{
+  const div=document.createElement('div');
+  div.className='card';
+  div.innerText=k;
+  div.onclick=()=>speak(k);
+  g.appendChild(div);
+ });
+}
+
+buildKana('hiraganaGrid',hiragana);
+buildKana('katakanaGrid',katakana);
 </script>
 
 </body>
