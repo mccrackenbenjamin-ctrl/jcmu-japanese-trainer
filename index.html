@@ -345,6 +345,190 @@ function startListening(){
 
 function endScenario(){
  let feedback="Conversation Complete<br>";
+ let drillButtons="";
+
+ if(mistakes.price>1){
+  feedback += "💡 Let's practice price questions.<br>";
+  drillButtons += `<button onclick="startDrill('price')">💴 Price Drill</button>`;
+ }
+
+ if(mistakes.particles>1){
+  feedback += "💡 Let's practice particles.<br>";
+  drillButtons += `<button onclick="startDrill('particles')">🧩 Particle Drill</button>`;
+ }
+
+ feedback += drillButtons;
+ feedback += `<button onclick="restartScenario()">🔁 Practice Again</button>`;
+ document.getElementById('feedback').innerHTML=feedback;
+}
+
+function startDrill(type){
+ hideAll();
+ document.getElementById('scenario').style.display='block';
+ document.getElementById('conversation').innerHTML='';
+ document.getElementById('feedback').innerHTML='';
+ step=0;
+
+ if(type==='price'){
+  scenario=[
+   {jp:"これはいくらですか？",en:"How much is this?"},
+   {jp:"それはいくらですか？",en:"How much is that?"},
+   {jp:"全部でいくらですか？",en:"How much in total?"}
+  ];
+ }
+
+ if(type==='particles'){
+  scenario=[
+   {jp:"わたしはアメリカから来ました。",en:"I came from America."},
+   {jp:"これをください。",en:"Please give me this."},
+   {jp:"学校に行きます。",en:"I go to school."}
+  ];
+ }
+
+ speakLine();
+}
+
+function restartScenario(){
+ step=0;
+ mistakes={price:0,particles:0};
+ document.getElementById('conversation').innerHTML='';
+ document.getElementById('feedback').innerHTML='';
+ speakLine();
+}
+
+function repeatPrompt(){ speak(scenario[step].jp, scenario[step].en); }(){ speak(scenario[step].jp, scenario[step].en); }
+function toggleRole(){ restartScenario(); }
+
+</script>
+</body>
+</html>
+<h3>JCMU Survival Mode</h3>
+<button onclick="startScenario('train')">🚉 Train Station</button>
+<button onclick="startScenario('conbini')">🏪 Convenience Store</button>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+<div id="genki" style="display:none;">
+<h3>Genki I - Lesson 1</h3>
+<button onclick="startScenario('host')">🎤 Meet Host Family</button>
+<button onclick="startScenario('classmates')">🎤 Meet Classmates</button>
+<button onclick="startScenario('professor')">🎤 Meet Professor</button>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+<div id="genki2" style="display:none;">
+<h3>Genki I - Lesson 2</h3>
+<button onclick="startScenario('shopping')">🛒 Shopping</button>
+<button class="secondary" onclick="goHome()">Back</button>
+</div>
+
+<div id="scenario" style="display:none;">
+<div id="conversation"></div>
+<button onclick="toggleRole()">🔄 Switch Role</button>
+<button onclick="repeatPrompt()">🔁 Repeat</button>
+<button onclick="startListening()">🎤 Tap to Speak</button>
+<button onclick="showExample()">💡 Example</button>
+<button onclick="restartScenario()">🔁 Start Over</button>
+<button class="secondary" onclick="goHome()">Back</button>
+<div class="feedback" id="feedback"></div>
+</div>
+
+</div>
+
+<script>
+let scenario=null;
+let step=0;
+let role='student';
+let mistakes={price:0,particles:0};
+let progress=JSON.parse(localStorage.getItem("jcmuProgress")||"{}");
+
+const scenarios={
+ host:[
+  {jp:"はじめまして。",en:"Nice to meet you."},
+  {jp:"お名前は？",en:"What is your name?"},
+  {jp:"どこから来ましたか？",en:"Where are you from?"}
+ ],
+ shopping:[
+  {jp:"これはいくらですか？",en:"How much is this?"},
+  {jp:"これをください。",en:"I'll take this."}
+ ],
+ train:[
+  {jp:"彦根までいくらですか？",en:"How much to Hikone?"}
+ ],
+ conbini:[
+  {jp:"袋はいりますか？",en:"Do you need a bag?",branch:true}
+ ]
+};
+
+const branches={
+ bag_yes:[
+  {jp:"はい、お願いします。",en:"Yes please."},
+  {jp:"５円になります。",en:"That will be 5 yen."}
+ ],
+ bag_no:[
+  {jp:"いいえ、大丈夫です。",en:"No thanks."},
+  {jp:"かしこまりました。",en:"Understood."}
+ ]
+};
+
+function showMenu(menu){ hideAll(); document.getElementById(menu).style.display='block'; }
+function hideAll(){ ['home','survival','genki','genki2','scenario'].forEach(id=>{document.getElementById(id).style.display='none';}); }
+function goHome(){ hideAll(); document.getElementById('home').style.display='block'; }
+
+function startScenario(type){
+ scenario=scenarios[type];
+ step=0;
+ role='student';
+ hideAll();
+ document.getElementById('scenario').style.display='block';
+ document.getElementById('conversation').innerHTML='';
+ speakLine();
+}
+
+function speakLine(){
+ const line=scenario[step];
+ speak(line.jp,line.en);
+}
+
+function speak(text,en){
+ document.getElementById('conversation').innerHTML+=`<p><b>AI:</b> ${text}<br><i>${en||''}</i></p>`;
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang='ja-JP';
+ speechSynthesis.speak(u);
+}
+
+function startListening(){
+ const recognition=new (window.SpeechRecognition||window.webkitSpeechRecognition)();
+ recognition.lang='ja-JP';
+ recognition.onresult=function(e){
+  const text=e.results[0][0].transcript;
+  document.getElementById('conversation').innerHTML+=`<p><b>You:</b> ${text}</p>`;
+
+  // Adaptive difficulty tracking
+  if(!text.includes("いくら")) mistakes.price++;
+  if(!text.match(/[はをがにで]/)) mistakes.particles++;
+
+  // Branching logic
+  if(scenario[step].branch){
+    if(text.includes("はい")){
+      scenario=branches.bag_yes;
+    } else {
+      scenario=branches.bag_no;
+    }
+    step=0;
+    setTimeout(()=>speakLine(),500);
+    return;
+  }
+
+  step++;
+  if(step<scenario.length){ speakLine(); }
+  else endScenario();
+ };
+ recognition.start();
+}
+
+function endScenario(){
+ let feedback="Conversation Complete<br>";
 
  let drillButtons="";
 
